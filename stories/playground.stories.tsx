@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {Meta, StoryObj} from "@storybook/react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { unified } from "unified";
 import markdown from "remark-parse";
 import gfm from "remark-gfm";
@@ -8,9 +9,12 @@ import Editor from "./components/editor";
 // @ts-expect-error no type definition
 import text from "../fixtures/article.md";
 
-export default {
-  title: "Playground",
-};
+const meta:Meta<typeof pdf> = {
+    title: "Playground",
+}
+
+export default meta; 
+type Story = StoryObj<typeof pdf>;
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <div
@@ -29,20 +33,24 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+export const MarkdownToPdf = () => {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const makePdf = useCallback(async contents => {
 const toPdfProcessor = unified()
 .use(markdown)
 .use(gfm)
 .use(frontmatter)
-.use(pdf, { output: "blob" });
+.use(pdf, { output: "blob", styles: {
+  head1: {
+    fontSize: 25
+  }
+} });
 
 const toPdf = async (s: string) => {
 const doc = await toPdfProcessor.process(s);
 return doc.result as Blob;
 };
 
-export const MarkdownToPdf = () => {
-  const frameRef = useRef<HTMLIFrameElement>(null);
-  const makePdf = useCallback(async contents => {
             const blob = await toPdf(contents);
             if (frameRef.current) {
               frameRef.current.src = URL.createObjectURL(blob);
