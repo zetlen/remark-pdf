@@ -43,11 +43,14 @@ type Decoration = Readonly<
 type Context = {
   readonly deco: Decoration;
   readonly images: ImageDataMap;
+  styles: TDocumentDefinitions["styles"]
 };
 
 export interface PdfOptions
   extends Pick<
     TDocumentDefinitions,
+    | "defaultStyle"
+    | "styles"
     | "pageMargins"
     | "pageOrientation"
     | "pageSize"
@@ -69,6 +72,44 @@ export interface PdfOptions
   info?: TDocumentInformation;
 }
 
+const baseStyles: TDocumentDefinitions["styles"] = {
+    [HEADING_1]: {
+      fontSize: 24,
+      margin: [0,20,0,16]
+    },
+    [HEADING_2]: {
+      fontSize: 18,
+      margin: [0,14,0,10]
+    },
+    [HEADING_3]: {
+      fontSize: 16,
+      margin: [0, 10 ,0,8]
+    },
+    [HEADING_4]: {
+      fontSize: 14,
+      margin: [0,6,0,2]
+    },
+    [HEADING_5]: {
+      fontSize: 12,
+      margin: [0,4,0,0]
+    },
+    [HEADING_6]: {
+      fontSize: 14,
+    },
+    hrule: {
+      margin: [0,12,0,6] as [number,number,number,number],
+      color: "#CCCCCC"
+    },
+    p: {
+      lineHeight: 1.15,
+      margin: [0,5]
+    } as Omit<ContentText,'text'>,
+    li: {
+      lineHeight: 1.15,
+      margin: [0,5]
+    }
+}
+
 export function mdastToPdf(
   node: mdast.Root,
   {
@@ -82,11 +123,17 @@ export function mdastToPdf(
     permissions,
     version,
     watermark,
+    defaultStyle,
+    styles = {},
   }: PdfOptions,
   images: ImageDataMap,
   build: (def: TDocumentDefinitions) => Promise<any>
 ): Promise<any> {
-  const content = convertNodes(node.children, { deco: {}, images });
+  const allStyles = {
+    ...baseStyles,
+    ...styles
+  };
+  const content = convertNodes(node.children, { deco: {}, images, styles: allStyles });
   const doc = build({
     info,
     pageMargins,
@@ -101,27 +148,9 @@ export function mdastToPdf(
     images,
     defaultStyle: {
       font: isBrowser() ? "Roboto" : "Helvetica",
+      ...defaultStyle,
     },
-    styles: {
-      [HEADING_1]: {
-        fontSize: 24,
-      },
-      [HEADING_2]: {
-        fontSize: 22,
-      },
-      [HEADING_3]: {
-        fontSize: 20,
-      },
-      [HEADING_4]: {
-        fontSize: 18,
-      },
-      [HEADING_5]: {
-        fontSize: 16,
-      },
-      [HEADING_6]: {
-        fontSize: 14,
-      },
-    },
+    styles: allStyles
   });
   return doc;
 }
@@ -230,7 +259,7 @@ function convertNodes(nodes: mdast.Content[], ctx: Context) {
 }
 
 function buildParagraph({ type, children }: mdast.Paragraph, ctx: Context) {
-  return <ContentText>{ text: convertNodes(children, ctx) };
+  return <ContentText>{ text: convertNodes(children, ctx), ...ctx.styles!.p };
 }
 
 function buildHeading({ type, children, depth }: mdast.Heading, ctx: Context) {
@@ -262,11 +291,16 @@ function buildHeading({ type, children, depth }: mdast.Heading, ctx: Context) {
 }
 
 function buildThematicBreak({ type }: mdast.ThematicBreak, ctx: Context) {
+  const style =  {...ctx.styles!.hrule};
+  if (typeof style.margin === "number") {
+    style.margin = [style.margin, style.margin, style.margin, style.margin];
+  }
   return <ContentCanvas>{
-    margin: [0, 12, 0, 0],
+    margin: style.margin,
     canvas: [
       {
         type: "line",
+        lineColor: style.color,
         x1: 0,
         y1: 0,
         x2: (514 / 100) * 100,
@@ -298,7 +332,10 @@ function buildListItem(
   { type, children, checked, spread }: mdast.ListItem,
   ctx: Context
 ) {
-  return convertNodes(children, ctx);
+  return {
+    text: convertNodes(children, ctx),
+    ...ctx.styles!.li
+  };
 }
 
 function buildTable({ type, children, align }: mdast.Table, ctx: Context) {
