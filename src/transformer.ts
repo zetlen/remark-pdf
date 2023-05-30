@@ -9,11 +9,13 @@ import type {
   ContentText,
   ContentUnorderedList,
   Style,
+  StyleDictionary,
   TableCell,
   TDocumentDefinitions,
   TDocumentInformation,
+  TFontDictionary,
 } from "pdfmake/interfaces";
-import { error, isBrowser } from "./utils";
+import { error, isBrowser, mergeTwoLevels } from "./utils";
 
 type Content = Exclude<AllContent, any[]>;
 
@@ -70,9 +72,10 @@ export interface PdfOptions
    */
   imageResolver?: ImageResolver;
   info?: TDocumentInformation;
+  fonts?: TFontDictionary
 }
 
-const baseStyles: TDocumentDefinitions["styles"] = {
+const baseStyles: StyleDictionary = {
     [HEADING_1]: {
       fontSize: 24,
       margin: [0,20,0,16]
@@ -129,10 +132,7 @@ export function mdastToPdf(
   images: ImageDataMap,
   build: (def: TDocumentDefinitions) => Promise<any>
 ): Promise<any> {
-  const allStyles = {
-    ...baseStyles,
-    ...styles
-  };
+  const allStyles = mergeTwoLevels(baseStyles, styles);
   const content = convertNodes(node.children, { deco: {}, images, styles: allStyles });
   const doc = build({
     info,

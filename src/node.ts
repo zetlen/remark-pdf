@@ -2,11 +2,12 @@ import type { Plugin } from "unified";
 import * as mdast from "mdast";
 import { visit } from "unist-util-visit";
 import { mdastToPdf, PdfOptions, ImageDataMap } from "./transformer";
+import { mergeTwoLevels } from "./utils";
 
 import Printer from "pdfmake";
 import { error } from "./utils";
 
-const printer = new Printer({
+const defaultFonts = {
   Courier: {
     normal: "Courier",
     bold: "Courier-Bold",
@@ -30,8 +31,8 @@ const printer = new Printer({
   },
   ZapfDingbats: {
     normal: "ZapfDingbats",
-  },
-});
+  }
+};
 
 export type { PdfOptions };
 
@@ -43,6 +44,7 @@ const plugin: Plugin<[PdfOptions?]> = function (opts = {}) {
 
   this.Compiler = (node) => {
     return mdastToPdf(node as any, opts, images, (def) => {
+      const printer = new Printer(mergeTwoLevels(defaultFonts, opts.fonts));
       const pdf = printer.createPdfKitDocument(def);
 
       return new Promise((resolve, reject) => {
