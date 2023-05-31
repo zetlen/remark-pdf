@@ -1,4 +1,4 @@
-import * as mdast from "./models/mdast";
+import * as mdast from "./models/mdast.js";
 import type {
   Alignment,
   Content as AllContent,
@@ -15,7 +15,9 @@ import type {
   TDocumentInformation,
   TFontDictionary,
 } from "pdfmake/interfaces";
-import { error, isBrowser, mergeTwoLevels } from "./utils";
+import BananaSlug from "github-slugger";
+import { toString as stringifyMd } from "mdast-util-to-string";
+import { error, isBrowser, mergeTwoLevels } from "./utils.js";
 
 type Content = Exclude<AllContent, any[]>;
 
@@ -42,14 +44,20 @@ type Decoration = Readonly<
   } & { link?: string; align?: Alignment }
 >;
 
-type Context = {
+interface CustomOptions {
+  transformUrls?: (url: string, node: mdast.Link) => string;
+}
+
+type Context = Required<CustomOptions> & {
   readonly deco: Decoration;
   readonly images: ImageDataMap;
-  styles: TDocumentDefinitions["styles"]
+  styles: TDocumentDefinitions["styles"];
+  slugs: BananaSlug;
 };
 
 export interface PdfOptions
-  extends Pick<
+  extends CustomOptions,
+  Pick<
     TDocumentDefinitions,
     | "defaultStyle"
     | "styles"
@@ -72,46 +80,46 @@ export interface PdfOptions
    */
   imageResolver?: ImageResolver;
   info?: TDocumentInformation;
-  fonts?: TFontDictionary
+  fonts?: TFontDictionary;
 }
 
 const baseStyles: StyleDictionary = {
-    [HEADING_1]: {
-      fontSize: 24,
-      margin: [0,20,0,16]
-    },
-    [HEADING_2]: {
-      fontSize: 18,
-      margin: [0,14,0,10]
-    },
-    [HEADING_3]: {
-      fontSize: 16,
-      margin: [0, 10 ,0,8]
-    },
-    [HEADING_4]: {
-      fontSize: 14,
-      margin: [0,6,0,2]
-    },
-    [HEADING_5]: {
-      fontSize: 12,
-      margin: [0,4,0,0]
-    },
-    [HEADING_6]: {
-      fontSize: 14,
-    },
-    hrule: {
-      margin: [0,12,0,6] as [number,number,number,number],
-      color: "#CCCCCC"
-    },
-    p: {
-      lineHeight: 1.15,
-      margin: [0,5]
-    } as Omit<ContentText,'text'>,
-    li: {
-      lineHeight: 1.15,
-      margin: [0,5]
-    }
-}
+  [HEADING_1]: {
+    fontSize: 24,
+    margin: [0, 20, 0, 16],
+  },
+  [HEADING_2]: {
+    fontSize: 18,
+    margin: [0, 14, 0, 10],
+  },
+  [HEADING_3]: {
+    fontSize: 16,
+    margin: [0, 10, 0, 8],
+  },
+  [HEADING_4]: {
+    fontSize: 14,
+    margin: [0, 6, 0, 2],
+  },
+  [HEADING_5]: {
+    fontSize: 12,
+    margin: [0, 4, 0, 0],
+  },
+  [HEADING_6]: {
+    fontSize: 14,
+  },
+  hrule: {
+    margin: [0, 12, 0, 6] as [number, number, number, number],
+    color: "#CCCCCC",
+  },
+  p: {
+    lineHeight: 1.15,
+    margin: [0, 5],
+  } as Omit<ContentText, "text">,
+  li: {
+    lineHeight: 1.15,
+    margin: [0, 5],
+  },
+};
 
 export function mdastToPdf(
   node: mdast.Root,
@@ -128,12 +136,20 @@ export function mdastToPdf(
     watermark,
     defaultStyle,
     styles = {},
+    transformUrls,
   }: PdfOptions,
   images: ImageDataMap,
   build: (def: TDocumentDefinitions) => Promise<any>
 ): Promise<any> {
+  const slugs = new BananaSlug();
   const allStyles = mergeTwoLevels(baseStyles, styles);
-  const content = convertNodes(node.children, { deco: {}, images, styles: allStyles });
+  const content = convertNodes(node.children, {
+    deco: {},
+    images,
+    styles: allStyles,
+    transformUrls: transformUrls || ((x) => x),
+    slugs,
+  });
   const doc = build({
     info,
     pageMargins,
@@ -150,7 +166,7 @@ export function mdastToPdf(
       font: isBrowser() ? "Roboto" : "Helvetica",
       ...defaultStyle,
     },
-    styles: allStyles
+    styles: allStyles,
   });
   return doc;
 }
@@ -263,35 +279,36 @@ function buildParagraph({ type, children }: mdast.Paragraph, ctx: Context) {
 }
 
 function buildHeading({ type, children, depth }: mdast.Heading, ctx: Context) {
-  let heading: string;
+  let style: string;
   switch (depth) {
     case 1:
-      heading = HEADING_1;
+      style = HEADING_1;
       break;
     case 2:
-      heading = HEADING_2;
+      style = HEADING_2;
       break;
     case 3:
-      heading = HEADING_3;
+      style = HEADING_3;
       break;
     case 4:
-      heading = HEADING_4;
+      style = HEADING_4;
       break;
     case 5:
-      heading = HEADING_5;
+      style = HEADING_5;
       break;
     case 6:
-      heading = HEADING_6;
+      style = HEADING_6;
       break;
   }
   return <ContentText>{
     text: convertNodes(children, ctx),
-    style: heading,
+    style,
+    id: ctx.slugs.slug(stringifyMd({ type, children, depth })),
   };
 }
 
 function buildThematicBreak({ type }: mdast.ThematicBreak, ctx: Context) {
-  const style =  {...ctx.styles!.hrule};
+  const style = { ...ctx.styles!.hrule };
   if (typeof style.margin === "number") {
     style.margin = [style.margin, style.margin, style.margin, style.margin];
   }
@@ -321,11 +338,11 @@ function buildList(
 ) {
   return ordered
     ? <ContentOrderedList>{
-        ol: children.map((l) => buildListItem(l, ctx)),
-      }
+      ol: children.map((l) => buildListItem(l, ctx)),
+    }
     : <ContentUnorderedList>{
-        ul: children.map((l) => buildListItem(l, ctx)),
-      };
+      ul: children.map((l) => buildListItem(l, ctx)),
+    };
 }
 
 function buildListItem(
@@ -334,7 +351,7 @@ function buildListItem(
 ) {
   return {
     text: convertNodes(children, ctx),
-    ...ctx.styles!.li
+    ...ctx.styles!.li,
   };
 }
 
@@ -430,7 +447,13 @@ function buildBreak({ type }: mdast.Break, ctx: Context) {
 }
 
 function buildLink({ type, children, url, title }: mdast.Link, ctx: Context) {
-  return convertNodes(children, { ...ctx, deco: { ...ctx.deco, link: url } });
+  return convertNodes(children, {
+    ...ctx,
+    deco: {
+      ...ctx.deco,
+      link: ctx.transformUrls(url, { type, children, url, title }),
+    },
+  });
 }
 
 function buildImage(

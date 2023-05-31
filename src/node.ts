@@ -1,11 +1,8 @@
 import type { Plugin } from "unified";
-import * as mdast from "mdast";
-import { visit } from "unist-util-visit";
-import { mdastToPdf, PdfOptions, ImageDataMap } from "./transformer";
-import { mergeTwoLevels } from "./utils";
+import { mdastToPdf, PdfOptions, ImageDataMap } from "./transformer.js";
+import { mergeTwoLevels, error } from "./utils.js";
 
 import Printer from "pdfmake";
-import { error } from "./utils";
 
 const defaultFonts = {
   Courier: {

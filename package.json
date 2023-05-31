@@ -2,25 +2,24 @@
   "name": "@jzetlen/remark-pdf",
   "version": "0.1.1",
   "description": "remark plugin to compile markdown to pdf.",
-  "main": "lib/index.js",
-  "module": "lib/index.mjs",
-  "types": "lib/index.d.ts",
+  "type": "module",
+  "main": "lib/browser/index.js",
+  "module": "lib/browser/index.mjs",
+  "types": "lib/node/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "module": "./lib/index.mjs",
-      "default": "./lib/index.js"
-    },
-    "./node": {
-      "module": "./lib/node.mjs",
-      "default": "./lib/node.js"
+      "browser": "./lib/browser/index.js",
+      "default": "./lib/node/node.js"
     }
   },
   "files": [
     "lib"
   ],
   "scripts": {
-    "build": "rollup -c",
+    "build:node": "tsc",
+    "build:browser": "rollup -c",
+    "build": "npm run build:node && npm run build:browser",
     "test": "jest",
     "tsc": "tsc -p . --noEmit",
     "storybook": "storybook dev -p 6006",
@@ -30,6 +29,8 @@
   },
   "dependencies": {
     "@types/pdfmake": "^0.1.20",
+    "github-slugger": "^2.0.0",
+    "mdast-util-to-string": "^3.2.0",
     "pdfmake": "^0.2.4",
     "unist-util-visit": "^4.1.0"
   },
@@ -37,6 +38,7 @@
     "@babel/core": "7.15.5",
     "@babel/preset-env": "7.15.6",
     "@babel/preset-typescript": "7.15.0",
+    "@rollup/plugin-node-resolve": "^13.3.0",
     "@rollup/plugin-typescript": "10.0.1",
     "@storybook/addon-essentials": "7.0.11",
     "@storybook/addon-links": "7.0.11",

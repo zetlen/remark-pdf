@@ -1,18 +1,16 @@
 import type { Plugin } from "unified";
-import * as mdast from "mdast";
-import { visit } from "unist-util-visit";
 import { mdastToPdf, PdfOptions, ImageDataMap } from "./transformer";
 
-import * as pdfMake from "pdfmake/build/pdfmake";
-import * as pdfFonts from "pdfmake/build/vfs_fonts";
-(<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
+import pdfMake from "pdfmake/build/pdfmake.js";
+import pdfFonts from "pdfmake/build/vfs_fonts.js";
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 export type { PdfOptions };
 
 /**
  * Plugin for browser
  */
-const plugin: Plugin<[PdfOptions?]> = function (opts = {}) {
+export const remarkPdf: Plugin<[PdfOptions?]> = function (opts = {}) {
   let images: ImageDataMap = {};
 
   this.Compiler = (node) => {
@@ -31,4 +29,5 @@ const plugin: Plugin<[PdfOptions?]> = function (opts = {}) {
     });
   };
 };
-export default plugin;
+
+export default remarkPdf;
