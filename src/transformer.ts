@@ -27,6 +27,7 @@ const HEADING_3 = "head3";
 const HEADING_4 = "head4";
 const HEADING_5 = "head5";
 const HEADING_6 = "head6";
+const LINK_ELEMENT = "a";
 
 export type ImageDataMap = { [url: string]: string };
 
@@ -118,6 +119,10 @@ const baseStyles: StyleDictionary = {
   li: {
     lineHeight: 1.15,
     margin: [0, 5],
+  },
+  LINK_ELEMENT: {
+    color: "blue",
+    decoration: "underline",
   },
 };
 
@@ -432,7 +437,7 @@ function buildText(text: string, ctx: Context) {
   }
   if (ctx.deco.link != null) {
     content.link = ctx.deco.link;
-    content.color = "blue";
+    content.style = LINK_ELEMENT;
   }
   if (ctx.deco.align != null) {
     ((content.style || (content.style = {})) as Style).alignment =
