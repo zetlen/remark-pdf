@@ -47,6 +47,7 @@ type Decoration = Readonly<
 
 interface CustomOptions {
   transformUrls?: (url: string, node: mdast.Link) => string;
+  preventOrphans?: boolean;
 }
 
 type Context = Required<CustomOptions> & {
@@ -142,6 +143,7 @@ export function mdastToPdf(
     defaultStyle,
     styles = {},
     transformUrls,
+    preventOrphans,
   }: PdfOptions,
   images: ImageDataMap,
   build: (def: TDocumentDefinitions) => Promise<any>
@@ -153,10 +155,15 @@ export function mdastToPdf(
     images,
     styles: allStyles,
     transformUrls: transformUrls || ((x) => x),
+    preventOrphans: preventOrphans || false,
     slugs,
   });
   const doc = build({
     info,
+    pageBreakBefore: preventOrphans
+      ? (currentNode, followingNodesOnPage) =>
+        currentNode.headlineLevel === 1 && followingNodesOnPage.length === 0
+      : undefined,
     pageMargins,
     pageOrientation,
     pageSize,
