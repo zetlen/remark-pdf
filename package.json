@@ -1,5 +1,8 @@
 {
   "name": "@jzetlen/remark-pdf",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "0.3.0",
   "description": "remark plugin to compile markdown to pdf.",
   "type": "module",
