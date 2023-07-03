@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.3.1",
+  "version": "0.3.2-0",
   "description": "remark plugin to compile markdown to pdf.",
   "type": "module",
   "main": "lib/browser/index.js",
