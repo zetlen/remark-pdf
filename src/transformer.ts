@@ -361,10 +361,10 @@ function buildListItem(
   { type, children, checked, spread }: mdast.ListItem,
   ctx: Context
 ) {
-  return {
-    text: convertNodes(children, ctx),
-    ...ctx.styles!.li,
-  };
+  return convertNodes(children, {
+    ...ctx,
+    ...ctx.styles!.li
+  })
 }
 
 function buildTable({ type, children, align }: mdast.Table, ctx: Context) {
