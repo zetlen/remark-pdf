@@ -59,19 +59,19 @@ type Context = Required<CustomOptions> & {
 
 export interface PdfOptions
   extends CustomOptions,
-  Pick<
-    TDocumentDefinitions,
-    | "defaultStyle"
-    | "styles"
-    | "pageMargins"
-    | "pageOrientation"
-    | "pageSize"
-    | "userPassword"
-    | "ownerPassword"
-    | "permissions"
-    | "version"
-    | "watermark"
-  > {
+    Pick<
+      TDocumentDefinitions,
+      | "defaultStyle"
+      | "styles"
+      | "pageMargins"
+      | "pageOrientation"
+      | "pageSize"
+      | "userPassword"
+      | "ownerPassword"
+      | "permissions"
+      | "version"
+      | "watermark"
+    > {
   /**
    * Set output type of `VFile.result`. `buffer` is `Promise<Buffer>`. `blob` is `Promise<Blob>`.
    * @defaultValue "buffer"
@@ -162,7 +162,7 @@ export function mdastToPdf(
     info,
     pageBreakBefore: preventOrphans
       ? (currentNode, followingNodesOnPage) =>
-        currentNode.headlineLevel === 1 && followingNodesOnPage.length === 0
+          currentNode.headlineLevel === 1 && followingNodesOnPage.length === 0
       : undefined,
     pageMargins,
     pageOrientation,
@@ -203,7 +203,7 @@ function convertNodes(nodes: mdast.Content[], ctx: Context) {
         results.push(buildList(node, ctx));
         break;
       case "listItem":
-        error("unreachable");
+        results.push(...buildListItem(node, ctx))
         break;
       case "table":
         results.push(buildTable(node, ctx));
@@ -350,21 +350,23 @@ function buildList(
 ) {
   return ordered
     ? <ContentOrderedList>{
-      ol: children.map((l) => buildListItem(l, ctx)),
-    }
+        ol: convertNodes(children, ctx),
+      }
     : <ContentUnorderedList>{
-      ul: children.map((l) => buildListItem(l, ctx)),
-    };
+        ul: convertNodes(children, ctx),
+      };
 }
 
 function buildListItem(
   { type, children, checked, spread }: mdast.ListItem,
   ctx: Context
 ) {
-  return convertNodes(children, {
-    ...ctx,
-    ...ctx.styles!.li
-  })
+  return convertNodes(children, ctx).map(
+    (child) =>
+      (typeof child !== "string" &&
+        "text" in child && { ...child, style: ctx.styles?.li }) ||
+      child
+  );
 }
 
 function buildTable({ type, children, align }: mdast.Table, ctx: Context) {
